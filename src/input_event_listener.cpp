@@ -54,15 +54,15 @@ class ProgressWorker : public NanAsyncProgressWorker {
 
         while (!event_queue.empty()) {
             uv_mutex_lock(&queue_lock);
-				input_event event = event_queue.front();
-				event_queue.pop();
-				v8::Local<v8::Object> result = NanNew<v8::Object>();
-				result->Set(NanNew<v8::String>("type"), NanNew<v8::Integer>(event.type));
-				result->Set(NanNew<v8::String>("code"), NanNew<v8::Integer>(event.code));
-				result->Set(NanNew<v8::String>("value"), NanNew<v8::Integer>(event.value));
-				result->Set(NanNew<v8::String>("timestamp"), NanNew<v8::Number>(event.time.tv_sec ));
-				v8::Local<v8::Value> argv[] = {result};
-				progress->Call(1, argv);
+                input_event event = event_queue.front();
+                event_queue.pop();
+                v8::Local<v8::Object> result = NanNew<v8::Object>();
+                result->Set(NanNew<v8::String>("type"), NanNew<v8::Integer>(event.type));
+                result->Set(NanNew<v8::String>("code"), NanNew<v8::Integer>(event.code));
+                result->Set(NanNew<v8::String>("value"), NanNew<v8::Integer>(event.value));
+                result->Set(NanNew<v8::String>("timestamp"), NanNew<v8::Number>(event.time.tv_sec ));
+                v8::Local<v8::Value> argv[] = {result};
+                progress->Call(1, argv);
             uv_mutex_unlock(&queue_lock);
         }
     }
