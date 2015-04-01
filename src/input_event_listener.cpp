@@ -20,9 +20,9 @@ bool LOOP_STARTED;
 
 class ProgressWorker : public NanAsyncProgressWorker {
     public:
-    ProgressWorker(NanCallback *progress, std::string filename_):
-    NanAsyncProgressWorker(progress),
-    progress(progress),
+    ProgressWorker(NanCallback *callback, std::string filename_):
+    NanAsyncProgressWorker(callback),
+    progress_callback(callback),
     filename(filename_) {
         uv_mutex_init(&queue_lock);
     }
@@ -52,8 +52,8 @@ class ProgressWorker : public NanAsyncProgressWorker {
     void HandleProgressCallback(const char *data, size_t size) {
         NanScope();
 
+        uv_mutex_lock(&queue_lock);
         while (!event_queue.empty()) {
-            uv_mutex_lock(&queue_lock);
                 input_event event = event_queue.front();
                 event_queue.pop();
                 v8::Local<v8::Object> result = NanNew<v8::Object>();
@@ -62,14 +62,14 @@ class ProgressWorker : public NanAsyncProgressWorker {
                 result->Set(NanNew<v8::String>("value"), NanNew<v8::Integer>(event.value));
                 result->Set(NanNew<v8::String>("timestamp"), NanNew<v8::Number>(event.time.tv_sec ));
                 v8::Local<v8::Value> argv[] = {result};
-                progress->Call(1, argv);
-            uv_mutex_unlock(&queue_lock);
+                progress_callback->Call(1, argv);
         }
+        uv_mutex_unlock(&queue_lock);
     }
 
     private:
     std::string filename;
-    NanCallback *progress;
+    NanCallback *progress_callback;
     uv_mutex_t queue_lock;
     std::queue<input_event> event_queue;
 };
@@ -78,8 +78,8 @@ NAN_METHOD(InputEventListener) {
     NanScope();
     LOOP_STARTED = true;
     std::string filename(*NanAsciiString(args[0]));
-    NanCallback *progress = new NanCallback(args[1].As<v8::Function>());
-    NanAsyncQueueWorker(new ProgressWorker(progress, filename));
+    NanCallback *callback = new NanCallback(args[1].As<v8::Function>());
+    NanAsyncQueueWorker(new ProgressWorker(callback, filename));
     NanReturnUndefined();
 }
 
@@ -99,4 +99,4 @@ void Init(v8::Handle<v8::Object> exports) {
     , NanNew<v8::FunctionTemplate>(Destroy)->GetFunction());
 }
 
-NODE_MODULE(asyncprogressworker, Init)
+NODE_MODULE(input_event_listener, Init)
